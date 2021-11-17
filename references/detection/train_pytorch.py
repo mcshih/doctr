@@ -76,22 +76,42 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
     val_loss, batch_cnt = 0, 0
     val_iter = iter(val_loader)
     for images, targets in val_iter:
-        if torch.cuda.is_available():
-            images = images.cuda()
-        images = batch_transforms(images)
-        if amp:
-            with torch.cuda.amp.autocast():
-                out = model(images, targets, return_boxes=True)
-        else:
-            out = model(images, targets, return_boxes=True)
-        # Compute metric
-        loc_preds, _ = out['preds']
-        for boxes_gt, boxes_pred in zip(targets, loc_preds):
-            # Remove scores
-            val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :-1])
-
-        val_loss += out['loss'].item()
-        batch_cnt += 1
+        try:
+            if torch.cuda.is_available():
+                images = images.cuda()
+            images = batch_transforms(images)
+            if amp:
+                with torch.cuda.amp.autocast():
+                    out = model(images, targets, return_boxes=True, return_model_output=True)
+            else:
+                out = model(images, targets, return_boxes=True, return_model_output=True)
+            import cv2
+            # Compute metric
+            loc_preds, _ = out['preds']
+            for boxes_gt, boxes_pred, ou in zip(targets, loc_preds, out['out_map'].cpu().numpy()):
+                # Remove 
+                # canvas = np.transpose(ou, (1, 2, 0))
+                # canvas = cv2.cvtColor(canvas, cv2.COLOR_GRAY2BGR)
+                # for boxp in boxes_pred:
+                #     xm, ym, xma, yma, a = boxp
+                #     rect = ((xm+xma)*1024/2, (ym+yma)*1024/2), ((xma-xm)*1024, (yma-ym)*1024), 0
+                #     box = cv2.boxPoints(rect)
+                #     box = np.int0(box)
+                #     cv2.drawContours(canvas,[box],0,(0,255,255),2)
+                # for boxt in boxes_gt:
+                #     xm, ym, xma, yma = boxt
+                #     rect = ((xm+xma)*1024/2, (ym+yma)*1024/2), ((xma-xm)*1024, (yma-ym)*1024), 0
+                #     box = cv2.boxPoints(rect)
+                #     box = np.int0(box)
+                #     cv2.drawContours(canvas,[box],0,(0,0,255),1)
+                # cv2.imshow("img", canvas)
+                # cv2.waitKey(0)
+                val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :-1])
+            val_loss += out['loss'].item()
+            batch_cnt += 1 
+        except:
+            print("pas ok")
+            continue
 
     val_loss /= batch_cnt
     recall, precision, mean_iou = val_metric.summary()
@@ -112,7 +132,11 @@ def main(args):
         img_folder=os.path.join(args.val_path, 'images'),
         label_path=os.path.join(args.val_path, 'labels.json'),
         img_transforms=T.Resize((args.input_size, args.input_size)),
-        rotated_bbox=args.rotation
+        rotated_bbox=args.rotation,
+        # sample_transforms=T.SampleCompose([
+        #     T.RandomRotate(30, expand=True),
+        #     T.ImageTransform(T.Resize((args.input_size, args.input_size))),
+        # ]),
     )
     val_loader = DataLoader(
         val_set,
