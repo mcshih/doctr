@@ -90,8 +90,8 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
             loc_preds = out['preds']
             for boxes_gt, boxes_pred, ou in zip(targets, loc_preds, out['out_map'].cpu().numpy()):
                 # Remove 
-                # canvas = np.transpose(ou, (1, 2, 0))
-                # canvas = cv2.cvtColor(canvas, cv2.COLOR_GRAY2BGR)
+                canvas = np.transpose(ou, (1, 2, 0))
+                canvas = cv2.cvtColor(canvas, cv2.COLOR_GRAY2BGR)
                 # for boxp in boxes_pred:
                 #     xm, ym, xma, yma, a = boxp
                 #     rect = ((xm+xma)*1024/2, (ym+yma)*1024/2), ((xma-xm)*1024, (yma-ym)*1024), 0
@@ -104,8 +104,9 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
                 #     box = cv2.boxPoints(rect)
                 #     box = np.int0(box)
                 #     cv2.drawContours(canvas,[box],0,(0,0,255),1)
-                # cv2.imshow("img", canvas)
-                # cv2.waitKey(0)
+                cv2.imshow("img", canvas)
+                cv2.waitKey(0)
+                print(boxes_pred.shape)
                 val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :-1])
             val_loss += out['loss'].item()
             batch_cnt += 1 
@@ -132,11 +133,11 @@ def main(args):
         img_folder=os.path.join(args.val_path, 'images'),
         label_path=os.path.join(args.val_path, 'labels.json'),
         img_transforms=T.Resize((args.input_size, args.input_size)),
-        rotated_bbox=args.rotation,
-        # sample_transforms=T.SampleCompose([
-        #     T.RandomRotate(30, expand=True),
-        #     T.ImageTransform(T.Resize((args.input_size, args.input_size))),
-        # ]),
+        # rotated_bbox=args.rotation,
+        sample_transforms=T.SampleCompose([
+            T.RandomRotate(90, expand=True),
+            T.ImageTransform(T.Resize((args.input_size, args.input_size))),
+        ]),
     )
     val_loader = DataLoader(
         val_set,
@@ -155,7 +156,7 @@ def main(args):
     batch_transforms = Normalize(mean=(0.798, 0.785, 0.772), std=(0.264, 0.2749, 0.287))
 
     # Load doctr model
-    model = detection.__dict__[args.arch](pretrained=args.pretrained)
+    model = detection.__dict__[args.arch](pretrained=args.pretrained, assume_straight_pages=not args.rotation)
 
     # Resume weights
     if isinstance(args.resume, str):
@@ -179,7 +180,7 @@ def main(args):
         model = model.cuda()
 
     # Metrics
-    val_metric = LocalizationConfusion(rotated_bbox=args.rotation, mask_shape=(args.input_size, args.input_size))
+    val_metric = LocalizationConfusion(rotated_bbox=args.rotation, mask_shape=(400, 400))
 
     if args.test_only:
         print("Running evaluation")
@@ -201,7 +202,7 @@ def main(args):
             T.RandomRotate(30, expand=True),
             T.ImageTransform(T.Resize((args.input_size, args.input_size))),
         ]),
-        rotated_bbox=args.rotation
+        # rotated_bbox=args.rotation
     )
 
     train_loader = DataLoader(
