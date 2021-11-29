@@ -39,9 +39,8 @@ class DetectionDataset(AbstractDataset):
         img_transforms: Optional[Callable[[Any], Any]] = None,
         sample_transforms: Optional[Callable[[Any, Any], Tuple[Any, Any]]] = None,
         rotated_bbox: bool = False,
-        **kwargs: Any,
     ) -> None:
-        super().__init__(img_folder, **kwargs)
+        super().__init__(img_folder)
         self.img_transforms = img_transforms
         self.sample_transforms = sample_transforms
 
@@ -52,7 +51,6 @@ class DetectionDataset(AbstractDataset):
             labels = json.load(f)
 
         self.data: List[Tuple[str, np.ndarray]] = []
-        np_dtype = np.float16 if self.fp16 else np.float32
         for img_name, label in labels.items():
             polygons = np.asarray(label['polygons'])
             if rotated_bbox:
@@ -62,7 +60,7 @@ class DetectionDataset(AbstractDataset):
                 # Switch to xmin, ymin, xmax, ymax
                 boxes = np.concatenate((polygons.min(axis=1), polygons.max(axis=1)), axis=1)
 
-            self.data.append((img_name, np.asarray(boxes, dtype=np_dtype)))
+            self.data.append((img_name, np.asarray(boxes, dtype=np.float32)))
 
     def __getitem__(
         self,
