@@ -15,18 +15,18 @@ import time
 
 import numpy as np
 import torch
+import wandb
 from contiguous_params import ContiguousParams
 from fastprogress.fastprogress import master_bar, progress_bar
 from torch.optim.lr_scheduler import CosineAnnealingLR, OneCycleLR
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torchvision.transforms import ColorJitter, Compose, Normalize
-from utils import plot_samples
 
-import wandb
 from doctr import transforms as T
 from doctr.datasets import DetectionDataset
 from doctr.models import detection
 from doctr.utils.metrics import LocalizationConfusion
+from utils import plot_samples
 
 
 def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, mb, amp=False):
@@ -37,8 +37,7 @@ def fit_one_epoch(model, train_loader, batch_transforms, optimizer, scheduler, m
     model.train()
     train_iter = iter(train_loader)
     # Iterate over the batches of the dataset
-    for _ in progress_bar(range(len(train_loader)), parent=mb):
-        images, targets = next(train_iter)
+    for images, targets in progress_bar(train_iter, parent=mb):
 
         if torch.cuda.is_available():
             images = images.cuda()
@@ -92,18 +91,18 @@ def evaluate(model, val_loader, batch_transforms, val_metric, amp=False):
                 # Remove 
                 canvas = np.transpose(ou, (1, 2, 0))
                 canvas = cv2.cvtColor(canvas, cv2.COLOR_GRAY2BGR)
-                # for boxp in boxes_pred:
-                #     xm, ym, xma, yma, a = boxp
-                #     rect = ((xm+xma)*1024/2, (ym+yma)*1024/2), ((xma-xm)*1024, (yma-ym)*1024), 0
-                #     box = cv2.boxPoints(rect)
-                #     box = np.int0(box)
-                #     cv2.drawContours(canvas,[box],0,(0,255,255),2)
-                # for boxt in boxes_gt:
-                #     xm, ym, xma, yma = boxt
-                #     rect = ((xm+xma)*1024/2, (ym+yma)*1024/2), ((xma-xm)*1024, (yma-ym)*1024), 0
-                #     box = cv2.boxPoints(rect)
-                #     box = np.int0(box)
-                #     cv2.drawContours(canvas,[box],0,(0,0,255),1)
+                for boxp in boxes_pred:
+                    x, y, w, h, a, _ = boxp
+                    rect = (x*1024, y*1024), (w*1024, h*1024), a
+                    box = cv2.boxPoints(rect)
+                    box = np.int0(box)
+                    cv2.drawContours(canvas,[box],0,(0,255,255),2)
+                for boxt in boxes_gt:
+                    x, y, w, h, a, _ = boxt
+                    rect = (x*1024, y*1024), (w*1024, h*1024), a
+                    box = cv2.boxPoints(rect)
+                    box = np.int0(box)
+                    cv2.drawContours(canvas,[box],0,(0,0,255),1)
                 cv2.imshow("img", canvas)
                 cv2.waitKey(0)
                 print(boxes_pred.shape)
