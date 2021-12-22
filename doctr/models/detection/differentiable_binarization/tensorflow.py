@@ -17,7 +17,7 @@ from tensorflow.keras.applications import ResNet50
 from doctr.models.utils import IntermediateLayerGetter, conv_sequence, load_pretrained_params
 from doctr.utils.repr import NestedObject
 
-from ...backbones import mobilenet_v3_large
+from ...classification import mobilenet_v3_large
 from .base import DBPostProcessor, _DBNet
 
 __all__ = ['DBNet', 'db_resnet50', 'db_mobilenet_v3_large']
@@ -239,8 +239,8 @@ class DBNet(_DBNet, keras.Model, NestedObject):
             out["out_map"] = prob_map
 
         if target is None or return_boxes:
-            # Post-process boxes
-            out["preds"] = self.postprocessor(tf.squeeze(prob_map, axis=-1).numpy())
+            # Post-process boxes (keep only text predictions)
+            out["preds"] = [preds[0] for preds in self.postprocessor(prob_map.numpy())]
 
         if target is not None:
             thresh_map = self.threshold_head(feat_concat, **kwargs)

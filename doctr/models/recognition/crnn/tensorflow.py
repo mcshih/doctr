@@ -11,11 +11,11 @@ from tensorflow.keras import layers
 from tensorflow.keras.models import Model, Sequential
 
 from ....datasets import VOCABS
-from ...backbones import mobilenet_v3_large_r, mobilenet_v3_small_r, vgg16_bn
+from ...classification import mobilenet_v3_large_r, mobilenet_v3_small_r, vgg16_bn
 from ...utils import load_pretrained_params
 from ..core import RecognitionModel, RecognitionPostProcessor
 
-__all__ = ['CRNN', 'crnn_vgg16_bn', 'CTCPostProcessor', 'crnn_mobilenet_v3_small',
+__all__ = ['CRNN', 'crnn_vgg16_bn', 'crnn_mobilenet_v3_small',
            'crnn_mobilenet_v3_large']
 
 default_cfgs: Dict[str, Dict[str, Any]] = {

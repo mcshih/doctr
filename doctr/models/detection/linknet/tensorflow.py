@@ -13,7 +13,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import Sequential, layers
 
-from doctr.models.backbones import ResnetStage
+from doctr.models.classification import ResnetStage
 from doctr.models.utils import conv_sequence, load_pretrained_params
 from doctr.utils.repr import NestedObject
 
@@ -177,7 +177,6 @@ class LinkNet(_LinkNet, keras.Model):
         target: Optional[List[np.ndarray]] = None,
         return_model_output: bool = False,
         return_boxes: bool = False,
-        **kwargs: Any,
     ) -> Dict[str, Any]:
 
         logits = self.stem(x)
@@ -192,7 +191,7 @@ class LinkNet(_LinkNet, keras.Model):
 
         if target is None or return_boxes:
             # Post-process boxes
-            out["preds"] = self.postprocessor(tf.squeeze(prob_map, axis=-1).numpy())
+            out["preds"] = [preds[0] for preds in self.postprocessor(prob_map.numpy())]
 
         if target is not None:
             loss = self.compute_loss(logits, target)
