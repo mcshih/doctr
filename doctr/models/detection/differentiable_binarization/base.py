@@ -304,7 +304,6 @@ class _DBNet:
         target: List[np.ndarray],
         output_shape: Tuple[int, int, int],
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-
         if any(t.dtype != np.float32 for t in target):
             raise AssertionError("the expected dtype of target 'boxes' entry is 'np.float32'.")
         if any(np.any((t[:, :4] > 1) | (t[:, :4] < 0)) for t in target):

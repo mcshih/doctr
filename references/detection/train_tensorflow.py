@@ -54,16 +54,20 @@ def evaluate(model, val_loader, batch_transforms, val_metric):
     val_loss, batch_cnt = 0, 0
     val_iter = iter(val_loader)
     for images, targets in val_iter:
-        images = batch_transforms(images)
-        out = model(images, targets, training=False, return_boxes=True)
-        # Compute metric
-        loc_preds = out['preds']
-        for boxes_gt, boxes_pred in zip(targets, loc_preds):
-            # Remove scores
-            val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :-1])
+        try:
+            images = batch_transforms(images)
+            out = model(images, targets, training=False, return_boxes=True)
+            # Compute metric
+            loc_preds = out['preds']
+            for boxes_gt, boxes_pred in zip(targets, loc_preds):
+                # Remove scores
+                val_metric.update(gts=boxes_gt, preds=boxes_pred[:, :-1])
 
-        val_loss += out['loss'].numpy()
-        batch_cnt += 1
+            val_loss += out['loss'].numpy()
+            batch_cnt += 1
+        except:
+            print("pas ok")
+            continue
 
     val_loss /= batch_cnt
     recall, precision, mean_iou = val_metric.summary()
@@ -85,7 +89,7 @@ def main(args):
     val_set = DetectionDataset(
         img_folder=os.path.join(args.val_path, 'images'),
         label_path=os.path.join(args.val_path, 'labels.json'),
-        sample_transforms=T.Resize((args.input_size, args.input_size)),
+        img_transforms=T.Resize((args.input_size, args.input_size)),
     )
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, drop_last=False, workers=args.workers)
     print(f"Validation set loaded in {time.time() - st:.4}s ({len(val_set)} samples in "
@@ -123,14 +127,17 @@ def main(args):
     train_set = DetectionDataset(
         img_folder=os.path.join(args.train_path, 'images'),
         label_path=os.path.join(args.train_path, 'labels.json'),
-        sample_transforms=T.Compose([
-            T.Resize((args.input_size, args.input_size)),
+        img_transforms=T.Compose([
             # Augmentations
             T.RandomApply(T.ColorInversion(), .1),
             T.RandomJpegQuality(60),
             T.RandomSaturation(.3),
             T.RandomContrast(.3),
             T.RandomBrightness(.3),
+        ]),
+        sample_transforms=T.SampleCompose([
+            T.RandomRotate(90, expand=True),
+            T.ImageTransform(T.Resize((args.input_size, args.input_size))),
         ]),
     )
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, drop_last=True, workers=args.workers)
