@@ -21,16 +21,18 @@ class AbstractDataset(_AbstractDataset):
         img_name, target = self.data[index]
         # Read image
         img = read_img_as_tensor(os.path.join(self.root, img_name), dtype=tf.float32)
+        target = [read_img_as_tensor(os.path.join(self.root, t), dtype=tf.float32) for t in target] # list of masks
 
-        return img, target
+        return img, tf.stack(target, axis=-1)
 
     @staticmethod
     def collate_fn(samples: List[Tuple[tf.Tensor, Any]]) -> Tuple[tf.Tensor, List[Any]]:
 
         images, targets = zip(*samples)
         images = tf.stack(images, axis=0)
+        targets = tf.stack(targets, axis=0)
 
-        return images, list(targets)
+        return images, targets
 
 
 class VisionDataset(AbstractDataset, _VisionDataset):
