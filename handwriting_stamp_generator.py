@@ -8,17 +8,23 @@ from tqdm import tqdm
 
 # Word List
 word_file_list = []
-for root, dirnames, filenames in os.walk("/home/user/ACM/shih/IAM/words_a/"):
+for root, dirnames, filenames in os.walk("/mnt/baf69772-7c2f-4570-a192-06c62f849660/data/shih/IAM/words_a/"):
     for filename in filenames:
         path = os.path.join(root, filename)
         word_file_list.append(path)
 
+hk_path = "/mnt/baf69772-7c2f-4570-a192-06c62f849660/data/shih/HK_dataset/img_a"
+files = os.listdir(hk_path)
+for file in files:
+    path = os.path.join(hk_path, file)
+    word_file_list.append(path)
+
 def images_process(image_path, image_final_name):
-    result_path = "/home/user/ACM/shih/DDI-100/my_dataset/"
+    result_path = "/mnt/baf69772-7c2f-4570-a192-06c62f849660/data/shih/DDI-100/my_train_dataset/"
 
     img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
-    canvas = np.copy(img)
-    # print(img.shape)
+    canvas = cv2.cvtColor(img, cv2.COLOR_GRAY2BGRA)
+    
     height, width = img.shape[:2]
     N_word = random.randint(1, 20)
     N_selected_words = random.sample(word_file_list, N_word)
@@ -67,13 +73,13 @@ def images_process(image_path, image_final_name):
 
 #images_process("/home/user/ACM/shih/DDI-100/dataset_v1.3/01/orig_texts/0.png")
 
-label_file = "/home/user/ACM/shih/DDI-100/05_my_labels.json"
+label_file = "/mnt/baf69772-7c2f-4570-a192-06c62f849660/data/shih/DDI-100/04_gen_my_labels.json"
 labels_dict = {}
-origin_img_folder = "/home/user/ACM/shih/DDI-100/dataset_v1.3/05/orig_texts/"
+origin_img_folder = "/mnt/baf69772-7c2f-4570-a192-06c62f849660/data/shih/DDI-100/dataset_v1.3/04/gen_imgs/"
 pbar = tqdm(os.listdir(origin_img_folder))
 for doc in pbar:
     #print(doc)
-    save_name = "05_"+doc
+    save_name = "04_"+doc
     labels_dict[save_name] =  images_process(os.path.join(origin_img_folder,doc), save_name)
 with open(label_file, "w") as outfile:
     json.dump(labels_dict, outfile, indent = 4)

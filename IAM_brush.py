@@ -6,7 +6,7 @@ import numpy as np
 import os
 from tqdm import tqdm
 
-for root, dirnames, filenames in os.walk("/home/user/ACM/shih/IAM/words/"):
+for root, dirnames, filenames in os.walk("/mnt/baf69772-7c2f-4570-a192-06c62f849660/data/shih/IAM/sentences/"):
     pbar = tqdm(filenames)
     for filename in pbar:
         path = os.path.join(root, filename)
@@ -20,7 +20,7 @@ for root, dirnames, filenames in os.walk("/home/user/ACM/shih/IAM/words/"):
                     if img[i,j,0] > 200 and img[i,j,1] > 200 and img[i,j,2] > 200:
                         result[i,j,3] = 0
             
-            root = root.replace("/words/", "/words_a/")
+            root = root.replace("/sentences/", "/sentences_a/")
             pbar.set_description("Processing %s" % os.path.join(root, filename))
             cv2.imwrite(os.path.join(root, filename), result, [int(cv2.IMWRITE_PNG_COMPRESSION), 0])
         except:
