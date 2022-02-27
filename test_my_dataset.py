@@ -2,10 +2,10 @@ from operator import gt
 import cv2
 import numpy as np
 import os
+import torch
 
 os.environ['USE_TORCH'] = '1'
 
-import torch
 import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -15,7 +15,6 @@ from doctr.models.recognition.predictor import RecognitionPredictor
 from doctr.models.preprocessor import PreProcessor
 from doctr.models import crnn_vgg16_bn, db_resnet50, ocr_predictor
 from doctr.io import DocumentFile
-from doctr.utils.visualization import visualize_page
 from doctr.utils.metrics import LocalizationConfusion, OCRMetric, TextMatch
 
 def _pct(val):
@@ -41,8 +40,7 @@ def xml_parser(xmL_file):
         gt_boxes.append([x_min, y_min, x_max, y_max])
     return gt_boxes
 
-device = torch.device("cuda")
-torch.cuda.set_device(0)
+device = torch.device("cuda:0")
 
 def pred_boxes_list(result):
     pred_boxes = []
@@ -64,9 +62,9 @@ det_predictor = DetectionPredictor(PreProcessor((1024, 1024), batch_size=1), det
 reco_predictor = RecognitionPredictor(PreProcessor((32, 128), preserve_aspect_ratio=True, batch_size=32), reco_model)
 
 predictor = OCRPredictor(det_predictor, reco_predictor)
-
+predictor = predictor.eval().to(device=device)
 pretrained_model = ocr_predictor('db_resnet50', 'crnn_vgg16_bn', pretrained=True)
-# predictor = predictor.cuda()
+pretrained_model = pretrained_model.eval().to(device=device)
 det_metric = LocalizationConfusion(iou_thresh=0.5)
 det_pretrain_metric = LocalizationConfusion(iou_thresh=0.5)
 
@@ -95,9 +93,10 @@ for idx, file in enumerate(pbar):
     det_pretrain_metric.update(np.asarray(gt_boxes), np.asarray(pred_pretrained_boxes))
     # save file
     '''
-    output = visualize_page(result.pages[0].export(), np.asarray(img[0]))
-    output.savefig(save_folder + file)
-    plt.close(output)
+    for coord in pred_boxes:
+        xmin,ymin,xmax,ymax = coord
+        orgin_img = cv2.rectangle(orgin_img, (xmin,ymin), (xmax,ymax), (255,0,0), 2)
+    cv2.imwrite(os.path.join(save_folder, file), orgin_img)
     '''
 recall, precision, mean_iou = det_metric.summary()
 print(f"Text Detection - Recall: {_pct(recall)}, Precision: {_pct(precision)}, Mean IoU: {_pct(mean_iou)}")
